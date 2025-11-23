@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,14 +9,18 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-// Definición de Roles según PDF
+// Modelo de Usuario con Roles definidos
 model Usuario {
   id        String     @id @default(cuid())
   nombre    String
   email     String     @unique
-  rol       String     // GERENTE, DIRECTOR, INTERVENTOR, CONTADOR
-  avatar    String?
-  proyectos Proyecto[]
+  rol       String     // Roles: GERENTE_GENERAL, GERENTE_TECNICA, DIRECTOR, INTERVENTOR, CONTADOR, ADMIN
+  avatar    String?    // Iniciales para el UI
+  
+  // Relaciones
+  proyectosDirigidos Proyecto[] @relation("DirectorProyecto")
+  proyectosAsignados Proyecto[] @relation("InterventoresAsignados") // Relación M-N explícita
+  
   createdAt DateTime   @default(now())
 }
 
@@ -23,28 +29,36 @@ model Proyecto {
   nombre      String
   cliente     String
   centroCosto String   @unique
-  presupuesto Float
-  ejecutado   Float    @default(0)
+  presupuesto Float    // Presupuesto Contractual
+  ejecutado   Float    @default(0) // Sumatoria de facturas aprobadas
   fechaInicio DateTime
-  estado      String   @default("ACTIVO") // ACTIVO, FINALIZADO
+  estado      String   @default("ACTIVO") // Estados: ACTIVO, SUSPENDIDO, FINALIZADO
   
+  // Relaciones
   directorId  String
-  director    Usuario  @relation(fields: [directorId], references: [id])
+  director    Usuario  @relation("DirectorProyecto", fields: [directorId], references: [id])
+  
+  // Un proyecto puede tener múltiples interventores
+  interventores Usuario[] @relation("InterventoresAsignados")
   
   eventos     Evento[]
   createdAt   DateTime @default(now())
 }
 
 model Evento {
-  id          String   @id @default(cuid())
-  tipo        String   // ACTA_INICIO, PRORROGA, FACTURACION, ETC
-  fecha       DateTime
-  descripcion String
-  valor       Float?   // Solo para facturación
-  soporteUrl  String?
+  id            String   @id @default(cuid())
+  tipo          String   // Tipos: ACTA_INICIO, PRORROGA, SUSPENSION, ADICION, FACTURACION, INFORME_TECNICO
+  fecha         DateTime
+  descripcion   String
   
-  proyectoId  String
-  proyecto    Proyecto @relation(fields: [proyectoId], references: [id])
+  // Campos exclusivos para lógica de negocio avanzada
+  valor         Float?   // Para Facturación o Adiciones
+  numeroFactura String?  // Obligatorio para Contadores (CU-03)
+  soporteUrl    String?  // Ruta al archivo PDF almacenado
   
-  createdAt   DateTime @default(now())
+  // Relaciones
+  proyectoId    String
+  proyecto      Proyecto @relation(fields: [proyectoId], references: [id])
+  
+  createdAt     DateTime @default(now())
 }
