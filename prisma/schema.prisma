@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Definición de Roles según PDF
+model Usuario {
+  id        String     @id @default(cuid())
+  nombre    String
+  email     String     @unique
+  rol       String     // GERENTE, DIRECTOR, INTERVENTOR, CONTADOR
+  avatar    String?
+  proyectos Proyecto[]
+  createdAt DateTime   @default(now())
+}
+
+model Proyecto {
+  id          String   @id @default(cuid())
+  nombre      String
+  cliente     String
+  centroCosto String   @unique
+  presupuesto Float
+  ejecutado   Float    @default(0)
+  fechaInicio DateTime
+  estado      String   @default("ACTIVO") // ACTIVO, FINALIZADO
+  
+  directorId  String
+  director    Usuario  @relation(fields: [directorId], references: [id])
+  
+  eventos     Evento[]
+  createdAt   DateTime @default(now())
+}
+
+model Evento {
+  id          String   @id @default(cuid())
+  tipo        String   // ACTA_INICIO, PRORROGA, FACTURACION, ETC
+  fecha       DateTime
+  descripcion String
+  valor       Float?   // Solo para facturación
+  soporteUrl  String?
+  
+  proyectoId  String
+  proyecto    Proyecto @relation(fields: [proyectoId], references: [id])
+  
+  createdAt   DateTime @default(now())
+}
